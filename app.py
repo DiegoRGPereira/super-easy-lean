@@ -1,8 +1,9 @@
 import streamlit as st
 import google.generativeai as genai
+from streamlit_gsheets import GSheetsConnection
 
-# 1. COLOCANDO O SEU CRACHÁ VIP DO GOOGLE (PUXANDO DO COFRE DA NUVEM)
-chave_secreta = st.secrets["GEMINI_API_KEY"]
+# 1. CRACHÁ VIP DO GOOGLE (PUXANDO DO COFRE)
+chave_secreta = st.secrets["AIzaSyACpZqXQYwyPAgZ55uRQVlW9c2F_km-hKQ"]
 genai.configure(api_key=chave_secreta)
 
 # 2. O SYSTEM PROMPT (A alma da AJA)
@@ -24,20 +25,22 @@ Etapas da Análise:
 Aqui está o relato e os documentos anexos para você analisar:
 """
 
-# 3. LIGANDO O CÉREBRO
 modelo = genai.GenerativeModel("gemini-2.5-flash")
 
 # --- INÍCIO DA TELA DO APLICATIVO ---
 st.set_page_config(page_title="AJA - Super Easy Lean", page_icon="⚙️")
 
-# --- A FOTO DA AJA ALINHADA COM O TÍTULO ---
+# 3. LENDO A PLANILHA DO GOOGLE SHEETS
+# O ttl=0 garante que a AJA sempre leia a planilha em tempo real (sem atrasos)
+conn = st.connection("gsheets", type=GSheetsConnection)
+planilha = conn.read(ttl=0) 
+
+# --- A FOTO E O TÍTULO ---
 col1, col2 = st.columns([1, 4]) 
 
 with col1:
-    # O SEGREDO: Criamos um espaço vazio de 15 pixels acima da foto para ela descer e alinhar com o texto
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     try:
-        # Usamos o st.image normal que sabemos que funciona!
         st.image("aja.png", width=100)
     except Exception:
         st.write("🤖") 
@@ -47,67 +50,70 @@ with col2:
     
 st.write("---") 
 
-# O Caderninho de anotações
-if 'usos_gratuitos' not in st.session_state:
-    st.session_state.usos_gratuitos = 0
+# --- A PORTA DE ENTRADA (LOGIN) ---
+email_usuario = st.text_input("🔑 Digite seu e-mail para acessar a AJA:")
 
-# A Regra do Pedágio
-if st.session_state.usos_gratuitos >= 3:
-    st.error("Seu teste grátis acabou! 🛑")
-    st.write("Para continuar gerando análises profundas com a AJA, assine nosso plano.")
-    st.link_button("💳 Pagar Assinatura", "https://buy.stripe.com/seu-link-aqui")
+if email_usuario: # Só mostra o resto se o usuário digitar algo
+    eh_vip = False
+    
+    # A AJA olha a coluna 'Email' da planilha para ver se acha o e-mail digitado
+    if email_usuario in planilha['Email'].values:
+        # Se achou, ela olha na mesma linha para ver se o Status é VIP
+        status_do_usuario = planilha.loc[planilha['Email'] == email_usuario, 'Status'].values[0]
+        if status_do_usuario == "VIP":
+            eh_vip = True
 
-else:
-    # A Tela Principal
-    st.write(f"Você tem direito a 3 análises gratuitas. Usos até agora: **{st.session_state.usos_gratuitos}**")
+    # --- REGRAS DE CATRACA ---
+    pode_usar = False
     
-    st.info("""
-    **📝 Como preencher o seu relato para uma análise perfeita:**
-    
-    * 🛑 **Não proponha soluções:** Descreva apenas os fatos, os sintomas e o impacto.
-    * 🗣️ **Traga a voz do Gemba:** Insira os relatos dos operadores e da engenharia.
-    * 🔍 **Seja factual:** Inclua dados (turno, modelo, quantidade de refugo).
-    """)
-    
-    # 1. A Caixa de Texto
-    problema_do_usuario = st.text_area("Cole aqui o seu relato detalhado do desvio de processo:", height=250)
-    
-    # 2. O Botão de Upload Múltiplo
-    st.write("📎 **Opcional:** Anexe POPs, fotos do defeito ou relatórios (PDF/Imagens):")
-    arquivos_anexados = st.file_uploader(
-        "Escolha os arquivos", 
-        type=['pdf', 'png', 'jpg', 'jpeg'], 
-        accept_multiple_files=True, 
-        label_visibility="collapsed"
-    )
-    
-    # 3. O Botão de Enviar
-    if st.button("Analisar Causa Raiz"):
-        if problema_do_usuario == "":
-            st.warning("Por favor, descreva o problema antes de analisar.")
+    if eh_vip:
+        st.success("✅ Acesso VIP Reconhecido! Pode utilizar a AJA à vontade.")
+        pode_usar = True
+    else:
+        # Lógica de quem não é VIP (Visitantes / Teste Grátis)
+        if 'usos_gratuitos' not in st.session_state:
+            st.session_state.usos_gratuitos = 0
+            
+        if st.session_state.usos_gratuitos >= 3:
+            st.error("🛑 Seu teste grátis (3 usos) acabou!")
+            st.write("Para continuar gerando análises profundas, assine nosso plano.")
+            st.link_button("💳 Assinar Super Easy Lean", "https://buy.stripe.com/seu-link-aqui")
         else:
-            with st.spinner("A AJA está investigando os fatos e analisando as evidências..."):
-                
-                # Preparamos a "caixa" base só com texto
-                pacote_para_ia = [instrucoes_do_agente, problema_do_usuario]
-                
-                # Se o usuário escolheu arquivos, fazemos um loop para pegar TODOS eles
-                if arquivos_anexados:
-                    for arquivo in arquivos_anexados:
-                        dados_do_arquivo = arquivo.getvalue()
-                        tipo_mime = arquivo.type
-                        
-                        pacote_para_ia.append({
-                            "mime_type": tipo_mime,
-                            "data": dados_do_arquivo
-                        })
-                
-                # Enviamos a caixa completa (Texto + Todos os Arquivos) para a IA
-                resposta = modelo.generate_content(pacote_para_ia)
-                
-                # Mostramos o resultado
-                st.success("Análise concluída com sucesso!")
-                st.markdown(resposta.text)
-                
-                # Registramos o uso
-                st.session_state.usos_gratuitos = st.session_state.usos_gratuitos + 1
+            st.info(f"Você está no modo Teste. Usos restantes hoje: **{3 - st.session_state.usos_gratuitos}**")
+            pode_usar = True
+
+    # --- A ÁREA DE TRABALHO (Só aparece se o usuário tiver permissão) ---
+    if pode_usar:
+        problema_do_usuario = st.text_area("Cole aqui o relato do problema:", height=200)
+        
+        arquivos_anexados = st.file_uploader(
+            "📎 Opcional: Anexe fotos ou PDFs:", 
+            type=['pdf', 'png', 'jpg', 'jpeg'], 
+            accept_multiple_files=True, 
+            label_visibility="collapsed"
+        )
+        
+        if st.button("Analisar Causa Raiz"):
+            if problema_do_usuario == "":
+                st.warning("Por favor, descreva o problema antes de analisar.")
+            else:
+                with st.spinner("AJA está investigando os fatos..."):
+                    
+                    pacote_para_ia = [instrucoes_do_agente, problema_do_usuario]
+                    
+                    if arquivos_anexados:
+                        for arquivo in arquivos_anexados:
+                            pacote_para_ia.append({
+                                "mime_type": arquivo.type,
+                                "data": arquivo.getvalue()
+                            })
+                    
+                    resposta = modelo.generate_content(pacote_para_ia)
+                    
+                    st.success("Análise concluída!")
+                    st.markdown(resposta.text)
+                    
+                    # Se não for VIP, ela "fura o cartão" e gasta 1 uso
+                    if not eh_vip:
+                        st.session_state.usos_gratuitos += 1
+                        st.rerun() # Atualiza a tela para mostrar a contagem caindo
