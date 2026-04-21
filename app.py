@@ -27,6 +27,14 @@ Aqui está o relato e os documentos anexos para você analisar:
 
 modelo = genai.GenerativeModel("gemini-2.5-flash")
 
+# --- INÍCIO DA TELA DO APLICATIVO ---
+st.set_page_config(page_title="AJA - Super Easy Lean", page_icon="⚙️")
+
+# 3. LENDO A PLANILHA DO GOOGLE SHEETS
+# O ttl=0 garante que a AJA sempre leia a planilha em tempo real (sem atrasos)
+conn = st.connection("gsheets", type=GSheetsConnection)
+planilha = conn.read(ttl=0) 
+
 # --- A FOTO E O TÍTULO ---
 col1, col2 = st.columns([1, 4]) 
 
@@ -48,26 +56,6 @@ with col2:
     )
     
 st.write("---")
-
-# 3. LENDO A PLANILHA DO GOOGLE SHEETS
-# O ttl=0 garante que a AJA sempre leia a planilha em tempo real (sem atrasos)
-conn = st.connection("gsheets", type=GSheetsConnection)
-planilha = conn.read(ttl=0) 
-
-# --- A FOTO E O TÍTULO ---
-col1, col2 = st.columns([1, 4]) 
-
-with col1:
-    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-    try:
-        st.image("aja.png", width=100)
-    except Exception:
-        st.write("🤖") 
-
-with col2:
-    st.title("AJA - Agente Super Easy Lean")
-    
-st.write("---") 
 
 # --- A PORTA DE ENTRADA (LOGIN) ---
 email_usuario = st.text_input("🔑 Digite seu e-mail para acessar a AJA:")
