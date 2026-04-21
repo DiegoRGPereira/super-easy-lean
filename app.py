@@ -3,7 +3,7 @@ import google.generativeai as genai
 from streamlit_gsheets import GSheetsConnection
 
 # 1. CRACHÁ VIP DO GOOGLE (PUXANDO DO COFRE)
-chave_secreta = st.secrets["AIzaSyACpZqXQYwyPAgZ55uRQVlW9c2F_km-hKQ"]
+chave_secreta = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=chave_secreta)
 
 # 2. O SYSTEM PROMPT (A alma da AJA)
