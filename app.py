@@ -28,7 +28,15 @@ Aqui está o relato e os documentos anexos para você analisar:
 modelo = genai.GenerativeModel("gemini-2.5-flash")
 
 # --- INÍCIO DA TELA DO APLICATIVO ---
-st.set_page_config(page_title="AJA - Super Easy Lean", page_icon="⚙️")
+with col2:
+    st.title("AJA - Agente Super Easy Lean")
+    # --- NOVIDADE: A DESCRIÇÃO DA AJA ---
+    st.markdown("**🤖 Assistente Especialista em Análise de Causa Raiz**")
+    st.caption(
+        "Transforme relatos do Gemba e evidências visuais em diagnósticos precisos. "
+        "A AJA aplica o rigor do Lean Manufacturing para identificar a verdadeira origem de desvios de processo, "
+        "estruturar diagramas de Ishikawa, 5 Porquês e entregar um Plano de Ação (PDCA) pronto para execução."
+    )
 
 # 3. LENDO A PLANILHA DO GOOGLE SHEETS
 # O ttl=0 garante que a AJA sempre leia a planilha em tempo real (sem atrasos)
